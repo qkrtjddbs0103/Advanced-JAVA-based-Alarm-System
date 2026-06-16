@@ -8,6 +8,7 @@ import javax.swing.*;
 
 public class Main {
     public static void main(String[] args) {
+        System.setProperty("sun.java2d.uiScale.enabled", "true");
         SwingUtilities.invokeLater(() -> {
             SimulationManager mediator = new SimulationManager();
 
@@ -20,8 +21,8 @@ public class Main {
             mediator.register("A", controllerA);
             mediator.register("B", controllerB);
 
-            frameA.getFriendsPanel().addFriend("Phone B", e -> controllerA.sendRemoteAlarm("B"));
-            frameB.getFriendsPanel().addFriend("Phone A", e -> controllerB.sendRemoteAlarm("A"));
+            controllerA.init("A", "Phone A");
+            controllerB.init("B", "Phone B");
 
             frameA.setLocation(100, 100);
             frameB.setLocation(560, 100);

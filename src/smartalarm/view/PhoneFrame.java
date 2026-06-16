@@ -2,66 +2,85 @@ package smartalarm.view;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
 public class PhoneFrame extends JFrame {
 
-    private static final String CARD_ALARM = "alarm";
-    private static final String CARD_FRIENDS = "friends";
+    private static final String CARD_ALARM    = "alarm";
+    private static final String CARD_FRIENDS  = "friends";
     private static final String CARD_SETTINGS = "settings";
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel screens = new JPanel(cardLayout);
 
-    private final AlarmPanel alarmPanel = new AlarmPanel();
-    private final FriendsPanel friendsPanel = new FriendsPanel();
+    private final AlarmPanel    alarmPanel    = new AlarmPanel();
+    private final FriendsPanel  friendsPanel  = new FriendsPanel();
     private final SettingsPanel settingsPanel = new SettingsPanel();
+
+    private final ImageIcon navAlarmIcon    = AlarmPanel.loadHQ("assets/UI_Images/nav_alarm_active.png",    390, 62);
+    private final ImageIcon navFriendsIcon  = AlarmPanel.loadHQ("assets/UI_Images/nav_friends_active.png",  390, 62);
+    private final ImageIcon navSettingsIcon = AlarmPanel.loadHQ("assets/UI_Images/nav_settings_active.png", 390, 62);
+    private JLabel navBar;
 
     public PhoneFrame(String title) {
         setTitle(title);
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        setSize(420, 380);
         setResizable(false);
-        setLocationRelativeTo(null);
 
-        screens.add(alarmPanel, CARD_ALARM);
-        screens.add(friendsPanel, CARD_FRIENDS);
+        JPanel content = new JPanel(null);
+        content.setBackground(new Color(20, 20, 30));
+        content.setPreferredSize(new Dimension(390, 720));
+        setContentPane(content);
+
+        screens.setOpaque(false);
+        screens.add(alarmPanel,    CARD_ALARM);
+        screens.add(friendsPanel,  CARD_FRIENDS);
         screens.add(settingsPanel, CARD_SETTINGS);
+        screens.setBounds(0, 0, 390, 614);
+        content.add(screens);
 
-        add(screens, BorderLayout.CENTER);
-        add(createNavBar(), BorderLayout.SOUTH);
+        navBar = buildNavBar();
+        content.add(navBar);
 
+        JLabel bgLabel = new JLabel(AlarmPanel.loadHQ("assets/UI_Images/background.png", 390, 720));
+        bgLabel.setBounds(0, 0, 390, 720);
+        content.add(bgLabel);
+        content.setComponentZOrder(bgLabel, content.getComponentCount() - 1);
+
+        pack();
+        setLocationRelativeTo(null);
         initTray();
     }
 
-    private JPanel createNavBar() {
-        JPanel nav = new JPanel(new GridLayout(1, 3));
-        nav.setBackground(new Color(49, 50, 68));
-
-        nav.add(createNavButton("Alarm", CARD_ALARM));
-        nav.add(createNavButton("Friends", CARD_FRIENDS));
-        nav.add(createNavButton("Settings", CARD_SETTINGS));
-
+    private JLabel buildNavBar() {
+        JLabel nav = new JLabel(navAlarmIcon);
+        nav.setBounds(0, 657, 390, 62);
+        nav.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        nav.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int third = nav.getWidth() / 3;
+                if (e.getX() < third) {
+                    cardLayout.show(screens, CARD_ALARM);
+                    nav.setIcon(navAlarmIcon);
+                } else if (e.getX() < third * 2) {
+                    cardLayout.show(screens, CARD_FRIENDS);
+                    nav.setIcon(navFriendsIcon);
+                } else {
+                    cardLayout.show(screens, CARD_SETTINGS);
+                    nav.setIcon(navSettingsIcon);
+                }
+            }
+        });
         return nav;
-    }
-
-    private JButton createNavButton(String label, String cardName) {
-        JButton button = new JButton(label);
-        button.setBackground(new Color(49, 50, 68));
-        button.setForeground(new Color(205, 214, 244));
-        button.setFont(new Font("SansSerif", Font.BOLD, 13));
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.addActionListener(e -> cardLayout.show(screens, cardName));
-        return button;
     }
 
     private void initTray() {
         if (!SystemTray.isSupported()) return;
 
         BufferedImage image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
-
         PopupMenu popup = new PopupMenu();
         MenuItem showItem = new MenuItem("Open");
         MenuItem exitItem = new MenuItem("Exit");
@@ -88,7 +107,7 @@ public class PhoneFrame extends JFrame {
         toFront();
     }
 
-    public AlarmPanel getAlarmPanel() { return alarmPanel; }
-    public FriendsPanel getFriendsPanel() { return friendsPanel; }
+    public AlarmPanel    getAlarmPanel()    { return alarmPanel; }
+    public FriendsPanel  getFriendsPanel()  { return friendsPanel; }
     public SettingsPanel getSettingsPanel() { return settingsPanel; }
 }

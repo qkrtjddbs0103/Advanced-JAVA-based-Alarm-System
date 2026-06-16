@@ -1,123 +1,125 @@
 package smartalarm.view;
 
 import javax.swing.*;
-import javax.swing.border.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 
 public class AlarmPanel extends JPanel {
 
-    private JSpinner hourSpinner, minuteSpinner, secondSpinner;
-    private JLabel currentTimeLabel;
-    private JLabel alarmStatusLabel;
+    // ── Transparent numeric field (replaces JSpinner) ──────────────────────
+    static class TimeField extends JLabel {
+        private int value = 0;
+
+        TimeField(int min, int max) {
+            super("00", SwingConstants.CENTER);
+            setFont(new Font("Monospaced", Font.BOLD, 30));
+            setForeground(new Color(0x1a4a8a));
+            setOpaque(false);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            addMouseWheelListener(e -> {
+                value -= (int) e.getWheelRotation();
+                if (value < min) value = max;
+                if (value > max) value = min;
+                setText(String.format("%02d", value));
+            });
+        }
+
+        int getValue() { return value; }
+    }
+
+    // ── Fields ──────────────────────────────────────────────────────────────
+    private final TimeField hourField   = new TimeField(0, 23);
+    private final TimeField minuteField = new TimeField(0, 59);
+    private final TimeField secondField = new TimeField(0, 59);
+
+    private JLabel  currentTimeLabel;
+    private JLabel  alarmStatusLabel;
     private JButton setAlarmButton, cancelAlarmButton;
 
+    private final Image clockPanelImg;
+    private final Image alarmSetPanelImg;
+
+    // ── Constructor ─────────────────────────────────────────────────────────
     public AlarmPanel() {
-        setLayout(new BorderLayout(10, 10));
-        setBorder(new EmptyBorder(20, 20, 20, 20));
-        setBackground(new Color(30, 30, 46));
+        setLayout(null);
+        setOpaque(false);
 
-        // current time display
+        clockPanelImg    = new ImageIcon("assets/UI_Images/clock_panel.png").getImage();
+        alarmSetPanelImg = new ImageIcon("assets/UI_Images/alarm_set_panel.png").getImage();
+
         currentTimeLabel = new JLabel("00:00:00", SwingConstants.CENTER);
-        currentTimeLabel.setFont(new Font("SansSerif", Font.BOLD, 52));
-        currentTimeLabel.setForeground(new Color(205, 214, 244));
-        add(currentTimeLabel, BorderLayout.NORTH);
+        currentTimeLabel.setFont(new Font("Monospaced", Font.BOLD, 52));
+        currentTimeLabel.setForeground(new Color(0x1a4a8a));
+        currentTimeLabel.setOpaque(false);
+        currentTimeLabel.setBounds(30, 130, 330, 90);
+        add(currentTimeLabel);
 
-        // alarm time settings panel
-        JPanel setPanel = new JPanel(new GridBagLayout());
-        setPanel.setBackground(new Color(49, 50, 68));
-        setPanel.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(new Color(137, 180, 250), 1),
-            "Set Alarm Time",
-            TitledBorder.CENTER, TitledBorder.TOP,
-            new Font("SansSerif", Font.BOLD, 13),
-            new Color(137, 180, 250)
-        ));
+        hourField.setBounds(78,  300, 72, 64);
+        minuteField.setBounds(159, 300, 72, 64);
+        secondField.setBounds(240, 300, 72, 64);
+        add(hourField);
+        add(minuteField);
+        add(secondField);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-
-        hourSpinner = createTimeSpinner(0, 23);
-        minuteSpinner = createTimeSpinner(0, 59);
-        secondSpinner = createTimeSpinner(0, 59);
-
-        gbc.gridx = 0; gbc.gridy = 0;
-        setPanel.add(styledLabel("Hour"), gbc);
-        gbc.gridx = 1;
-        setPanel.add(hourSpinner, gbc);
-        gbc.gridx = 2;
-        setPanel.add(styledLabel("Min"), gbc);
-        gbc.gridx = 3;
-        setPanel.add(minuteSpinner, gbc);
-        gbc.gridx = 4;
-        setPanel.add(styledLabel("Sec"), gbc);
-        gbc.gridx = 5;
-        setPanel.add(secondSpinner, gbc);
-
-        add(setPanel, BorderLayout.CENTER);
-
-        // bottom buttons and status display
-        JPanel bottomPanel = new JPanel(new BorderLayout(8, 8));
-        bottomPanel.setBackground(new Color(30, 30, 46));
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
-        buttonPanel.setBackground(new Color(30, 30, 46));
-
-        setAlarmButton = new JButton("Set Alarm");
-        styleButton(setAlarmButton, new Color(137, 180, 250), Color.WHITE);
-
-        cancelAlarmButton = new JButton("Cancel Alarm");
-        styleButton(cancelAlarmButton, new Color(243, 139, 168), Color.WHITE);
+        setAlarmButton    = imageButton("assets/UI_Images/set_alarm_btn.png",    330, 54);
+        cancelAlarmButton = imageButton("assets/UI_Images/cancel_alarm_btn.png", 330, 54);
+        setAlarmButton.setBounds(30, 394, 330, 54);
+        cancelAlarmButton.setBounds(30, 460, 330, 54);
         cancelAlarmButton.setEnabled(false);
-
-        buttonPanel.add(setAlarmButton);
-        buttonPanel.add(cancelAlarmButton);
+        add(setAlarmButton);
+        add(cancelAlarmButton);
 
         alarmStatusLabel = new JLabel("No alarm set.", SwingConstants.CENTER);
-        alarmStatusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        alarmStatusLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
         alarmStatusLabel.setForeground(new Color(166, 173, 200));
-
-        bottomPanel.add(buttonPanel, BorderLayout.CENTER);
-        bottomPanel.add(alarmStatusLabel, BorderLayout.SOUTH);
-
-        add(bottomPanel, BorderLayout.SOUTH);
+        alarmStatusLabel.setOpaque(false);
+        alarmStatusLabel.setBounds(30, 526, 330, 40);
+        add(alarmStatusLabel);
     }
 
-    private JSpinner createTimeSpinner(int min, int max) {
-        SpinnerNumberModel model = new SpinnerNumberModel(0, min, max, 1);
-        JSpinner spinner = new JSpinner(model);
-        JSpinner.NumberEditor editor = new JSpinner.NumberEditor(spinner, "00");
-        spinner.setEditor(editor);
-        spinner.setPreferredSize(new Dimension(58, 32));
-        spinner.setFont(new Font("SansSerif", Font.BOLD, 16));
-        JFormattedTextField tf = ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField();
-        tf.setBackground(new Color(69, 71, 90));
-        tf.setForeground(new Color(205, 214, 244));
-        tf.setCaretColor(new Color(205, 214, 244));
-        tf.setHorizontalAlignment(SwingConstants.CENTER);
-        return spinner;
+    // ── Painting ─────────────────────────────────────────────────────────────
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING,     RenderingHints.VALUE_RENDER_QUALITY);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,  RenderingHints.VALUE_ANTIALIAS_ON);
+
+        if (clockPanelImg    != null) g2.drawImage(clockPanelImg,    30, 118, 330, 110, this);
+        if (alarmSetPanelImg != null) g2.drawImage(alarmSetPanelImg, 30, 246, 330, 130, this);
+
     }
 
-    private JLabel styledLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("SansSerif", Font.BOLD, 15));
-        label.setForeground(new Color(166, 173, 200));
-        return label;
+    // ── Image loading ─────────────────────────────────────────────────────────
+    private static JButton imageButton(String path, int w, int h) {
+        ImageIcon icon = loadHQ(path, w, h);
+        JButton btn = new JButton(icon);
+        btn.setDisabledIcon(icon);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
-    private void styleButton(JButton button, Color bg, Color fg) {
-        button.setBackground(bg);
-        button.setForeground(fg);
-        button.setFont(new Font("SansSerif", Font.BOLD, 13));
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setPreferredSize(new Dimension(120, 36));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    static ImageIcon loadHQ(String path, int w, int h) {
+        Image src = new ImageIcon(path).getImage();
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = out.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING,     RenderingHints.VALUE_RENDER_QUALITY);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,  RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.drawImage(src, 0, 0, w, h, null);
+        g2.dispose();
+        return new ImageIcon(out);
     }
 
-    public JSpinner getHourSpinner() { return hourSpinner; }
-    public JSpinner getMinuteSpinner() { return minuteSpinner; }
-    public JSpinner getSecondSpinner() { return secondSpinner; }
-    public JButton getSetAlarmButton() { return setAlarmButton; }
+    // ── Getters ───────────────────────────────────────────────────────────────
+    public int     getHourValue()         { return hourField.getValue(); }
+    public int     getMinuteValue()       { return minuteField.getValue(); }
+    public int     getSecondValue()       { return secondField.getValue(); }
+    public JButton getSetAlarmButton()    { return setAlarmButton; }
     public JButton getCancelAlarmButton() { return cancelAlarmButton; }
 
     public void setCurrentTime(String text) {
