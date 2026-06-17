@@ -10,12 +10,21 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.io.File;
 import java.util.function.Supplier;
+
+import static java.awt.RenderingHints.*;
 
 public class MissionDialog extends JDialog {
 
+    private static final Image DIALOG_BG  = new ImageIcon("assets/UI_Images/background.png").getImage();
+    private static final Image INPUT_IMG  = new ImageIcon("assets/UI_Images/input_box.png").getImage();
+    private static final Image SUBMIT_IMG  = new ImageIcon("assets/UI_Images/mission_submit_btn.png").getImage();
+    private static final Image DISMISS_IMG = new ImageIcon("assets/UI_Images/mission_dismiss_btn.png").getImage();
+
     private final Supplier<Question> questionSupplier;
-    private final Runnable onDismiss;
+    private final Supplier<File>     soundSupplier;
+    private final Runnable           onDismiss;
 
     private Question currentQuestion;
     private int wrongCount = 0;
@@ -26,12 +35,14 @@ public class MissionDialog extends JDialog {
     private JButton submitButton;
     private JButton dismissButton;
     private Timer beepTimer;
+    private Clip  activeClip = null;
     private boolean closed = false;
 
-    public MissionDialog(JFrame owner, Supplier<Question> questionSupplier, Runnable onDismiss) {
+    public MissionDialog(JFrame owner, Supplier<Question> questionSupplier, Supplier<File> soundSupplier, Runnable onDismiss) {
         super(owner, Dialog.ModalityType.DOCUMENT_MODAL);
         this.questionSupplier = questionSupplier;
-        this.onDismiss = onDismiss;
+        this.soundSupplier    = soundSupplier;
+        this.onDismiss        = onDismiss;
         setUndecorated(true);
         setResizable(false);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -42,17 +53,24 @@ public class MissionDialog extends JDialog {
     }
 
     private void initUI() {
-        JPanel outer = new JPanel(new BorderLayout());
-        outer.setBackground(new Color(30, 30, 46));
-        outer.setBorder(BorderFactory.createLineBorder(new Color(88, 91, 112), 1));
+        JPanel outer = new JPanel(new BorderLayout()) {
+            @Override protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(DIALOG_BG, 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        outer.setBorder(BorderFactory.createLineBorder(new Color(59, 139, 255, 77), 1));
 
         // ── drag handle header ────────────────────────────────────────────────
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(30, 30, 46));
+        header.setOpaque(false);
         header.setBorder(new EmptyBorder(10, 18, 10, 18));
         JLabel headerTitle = new JLabel("Dismiss Alarm", SwingConstants.CENTER);
         headerTitle.setFont(new Font("SansSerif", Font.BOLD, 13));
-        headerTitle.setForeground(new Color(243, 139, 168));
+        headerTitle.setForeground(new Color(224, 53, 53));
         header.add(headerTitle);
         addDrag(header, this);
         outer.add(header, BorderLayout.NORTH);
@@ -60,24 +78,24 @@ public class MissionDialog extends JDialog {
         // ── content ───────────────────────────────────────────────────────────
         JPanel panel = new JPanel(new BorderLayout(8, 8));
         panel.setBorder(new EmptyBorder(4, 16, 16, 16));
-        panel.setBackground(new Color(30, 30, 46));
+        panel.setOpaque(false);
 
         JLabel titleLabel = new JLabel("Alarm is ringing!", SwingConstants.CENTER);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 17));
-        titleLabel.setForeground(new Color(243, 139, 168));
+        titleLabel.setForeground(new Color(224, 53, 53));
 
         JLabel subtitleLabel = new JLabel("Solve the problem to dismiss.", SwingConstants.CENTER);
         subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         subtitleLabel.setForeground(new Color(166, 173, 200));
 
         JPanel topPanel = new JPanel(new GridLayout(2, 1, 0, 4));
-        topPanel.setBackground(new Color(30, 30, 46));
+        topPanel.setOpaque(false);
         topPanel.add(titleLabel);
         topPanel.add(subtitleLabel);
         panel.add(topPanel, BorderLayout.NORTH);
 
         JPanel centerPanel = new JPanel(new GridBagLayout());
-        centerPanel.setBackground(new Color(49, 50, 68));
+        centerPanel.setOpaque(false);
         centerPanel.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -87,20 +105,26 @@ public class MissionDialog extends JDialog {
 
         questionLabel = new JLabel("", SwingConstants.CENTER);
         questionLabel.setFont(new Font("SansSerif", Font.BOLD, 22));
-        questionLabel.setForeground(new Color(250, 219, 121));
+        questionLabel.setForeground(new Color(26, 74, 138));
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         centerPanel.add(questionLabel, gbc);
 
-        answerField = new JTextField();
+        answerField = new JTextField() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(INPUT_IMG, 0, 0, getWidth(), getHeight(), this);
+                super.paintComponent(g);
+            }
+        };
+        answerField.setOpaque(false);
         answerField.setFont(new Font("SansSerif", Font.BOLD, 22));
         answerField.setHorizontalAlignment(SwingConstants.CENTER);
-        answerField.setBackground(new Color(69, 71, 90));
-        answerField.setForeground(new Color(205, 214, 244));
+        answerField.setForeground(new Color(90, 127, 168));
         answerField.setCaretColor(new Color(205, 214, 244));
-        answerField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(137, 180, 250), 1),
-            new EmptyBorder(4, 8, 4, 8)));
-        answerField.setPreferredSize(new Dimension(220, 40));
+        answerField.setBorder(new EmptyBorder(4, 8, 4, 8));
+        answerField.setPreferredSize(new Dimension(264, 40));
         gbc.gridy = 1; gbc.gridwidth = 2;
         centerPanel.add(answerField, gbc);
 
@@ -112,24 +136,34 @@ public class MissionDialog extends JDialog {
         panel.add(centerPanel, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
-        btnPanel.setBackground(new Color(30, 30, 46));
+        btnPanel.setOpaque(false);
 
-        submitButton = new JButton("Submit");
-        submitButton.setBackground(new Color(137, 180, 250));
-        submitButton.setForeground(Color.WHITE);
-        submitButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        submitButton.setFocusPainted(false);
+        submitButton = new JButton() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(SUBMIT_IMG, 0, 0, getWidth(), getHeight(), this);
+            }
+        };
         submitButton.setBorderPainted(false);
+        submitButton.setContentAreaFilled(false);
+        submitButton.setFocusPainted(false);
         submitButton.setPreferredSize(new Dimension(100, 34));
         submitButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         submitButton.addActionListener(e -> checkAnswer());
 
-        dismissButton = new JButton("Dismiss");
-        dismissButton.setBackground(new Color(166, 227, 161));
-        dismissButton.setForeground(new Color(30, 30, 46));
-        dismissButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        dismissButton.setFocusPainted(false);
+        dismissButton = new JButton() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(DISMISS_IMG, 0, 0, getWidth(), getHeight(), this);
+            }
+        };
         dismissButton.setBorderPainted(false);
+        dismissButton.setContentAreaFilled(false);
+        dismissButton.setFocusPainted(false);
         dismissButton.setPreferredSize(new Dimension(120, 34));
         dismissButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         dismissButton.setVisible(false);
@@ -157,24 +191,23 @@ public class MissionDialog extends JDialog {
         String input = answerField.getText().trim();
         switch (currentQuestion.checkAnswer(input)) {
             case CORRECT -> {
-                beepTimer.stop();
-                feedbackLabel.setForeground(new Color(166, 227, 161));
+                feedbackLabel.setForeground(new Color(26, 74, 138));
                 feedbackLabel.setText("<html><center>Correct! Press Dismiss to stop the alarm.</center></html>");
-                submitButton.setEnabled(false);
+                submitButton.setVisible(false);
                 answerField.setEnabled(false);
                 dismissButton.setVisible(true);
                 dismissButton.requestFocus();
             }
             case INCORRECT -> {
                 wrongCount++;
-                feedbackLabel.setForeground(new Color(243, 139, 168));
+                feedbackLabel.setForeground(new Color(224, 53, 53));
                 feedbackLabel.setText("<html><center>Wrong! Try again. (" + wrongCount + " incorrect)</center></html>");
                 answerField.selectAll();
                 answerField.requestFocus();
                 nextQuestion();
             }
             case INVALID_FORMAT -> {
-                feedbackLabel.setForeground(new Color(250, 219, 121));
+                feedbackLabel.setForeground(new Color(26, 74, 138));
                 feedbackLabel.setText("<html><center>Please enter numbers only.</center></html>");
                 answerField.selectAll();
             }
@@ -184,6 +217,7 @@ public class MissionDialog extends JDialog {
     private void dismiss() {
         closed = true;
         beepTimer.stop();
+        stopClip();
         dispose();
         onDismiss.run();
     }
@@ -191,7 +225,16 @@ public class MissionDialog extends JDialog {
     public void forceClose() {
         closed = true;
         if (beepTimer != null) beepTimer.stop();
+        stopClip();
         dispose();
+    }
+
+    private void stopClip() {
+        if (activeClip != null) {
+            activeClip.stop();
+            activeClip.close();
+            activeClip = null;
+        }
     }
 
     private void startBeeping() {
@@ -202,6 +245,28 @@ public class MissionDialog extends JDialog {
 
     private void playBeep() {
         if (closed) return;
+        File f = soundSupplier != null ? soundSupplier.get() : null;
+        if (f != null && f.exists()) {
+            playFromFile(f);
+        } else {
+            playGeneratedBeep();
+        }
+    }
+
+    private void playFromFile(File f) {
+        if (activeClip != null && activeClip.isRunning()) return;
+        try {
+            if (activeClip != null) activeClip.close();
+            AudioInputStream ais = AudioSystem.getAudioInputStream(f);
+            activeClip = AudioSystem.getClip();
+            activeClip.open(ais);
+            activeClip.start();
+        } catch (Exception ex) {
+            Toolkit.getDefaultToolkit().beep();
+        }
+    }
+
+    private void playGeneratedBeep() {
         float sampleRate = 44100f;
         int numSamples = (int) (sampleRate * 400 / 1000);
         byte[] buf = new byte[2 * numSamples];

@@ -56,4 +56,10 @@ public class SimulationManager {
         PhoneController to = byName.get(requesterName);
         if (to != null) to.friendRequestDenied(declinerName);
     }
+
+    public void routeNameChange(String oldName, String newName) {
+        for (PhoneController ctrl : byId.values()) {
+            ctrl.receiveFriendNameChange(oldName, newName);
+        }
+    }
 }

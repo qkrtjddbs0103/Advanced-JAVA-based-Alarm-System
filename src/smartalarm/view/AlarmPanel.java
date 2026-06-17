@@ -12,7 +12,7 @@ public class AlarmPanel extends JPanel {
 
         TimeField(int min, int max) {
             super("00", SwingConstants.CENTER);
-            setFont(new Font("Monospaced", Font.BOLD, 30));
+            setFont(new Font("Consolas", Font.BOLD, 30));
             setForeground(new Color(0x1a4a8a));
             setOpaque(false);
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -32,6 +32,7 @@ public class AlarmPanel extends JPanel {
     private final TimeField minuteField = new TimeField(0, 59);
     private final TimeField secondField = new TimeField(0, 59);
 
+    private JLabel  miniTimeLbl;
     private JLabel  currentTimeLabel;
     private JLabel  alarmStatusLabel;
     private JButton setAlarmButton, cancelAlarmButton;
@@ -47,16 +48,24 @@ public class AlarmPanel extends JPanel {
         clockPanelImg    = new ImageIcon("assets/UI_Images/clock_panel.png").getImage();
         alarmSetPanelImg = new ImageIcon("assets/UI_Images/alarm_set_panel.png").getImage();
 
+        JLabel miniTimeLabel = new JLabel("00:00", SwingConstants.LEFT);
+        miniTimeLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        miniTimeLabel.setForeground(new Color(37, 99, 168));
+        miniTimeLabel.setOpaque(false);
+        miniTimeLabel.setBounds(25, 23, 80, 18);
+        add(miniTimeLabel);
+        this.miniTimeLbl = miniTimeLabel;
+
         currentTimeLabel = new JLabel("00:00:00", SwingConstants.CENTER);
-        currentTimeLabel.setFont(new Font("Monospaced", Font.BOLD, 52));
+        currentTimeLabel.setFont(new Font("Consolas", Font.BOLD, 52));
         currentTimeLabel.setForeground(new Color(0x1a4a8a));
         currentTimeLabel.setOpaque(false);
-        currentTimeLabel.setBounds(30, 130, 330, 90);
+        currentTimeLabel.setBounds(30, 135, 330, 90);
         add(currentTimeLabel);
 
-        hourField.setBounds(78,  300, 72, 64);
-        minuteField.setBounds(159, 300, 72, 64);
-        secondField.setBounds(240, 300, 72, 64);
+        hourField.setBounds(79,  305, 72, 64);
+        minuteField.setBounds(159, 305, 72, 64);
+        secondField.setBounds(239, 305, 72, 64);
         add(hourField);
         add(minuteField);
         add(secondField);
@@ -122,9 +131,8 @@ public class AlarmPanel extends JPanel {
     public JButton getSetAlarmButton()    { return setAlarmButton; }
     public JButton getCancelAlarmButton() { return cancelAlarmButton; }
 
-    public void setCurrentTime(String text) {
-        currentTimeLabel.setText(text);
-    }
+    public void setCurrentTime(String text) { currentTimeLabel.setText(text); }
+    public void setMiniTime(String text)    { miniTimeLbl.setText(text); }
 
     public void setAlarmStatus(String text, Color color) {
         alarmStatusLabel.setForeground(color);

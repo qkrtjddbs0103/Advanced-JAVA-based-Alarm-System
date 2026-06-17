@@ -1,6 +1,8 @@
 package smartalarm.controller;
 
 import smartalarm.mediator.SimulationManager;
+
+import static java.awt.RenderingHints.*;
 import smartalarm.model.Alarm;
 import smartalarm.model.question.DictationQuestion;
 import smartalarm.model.question.MathQuestion;
@@ -26,9 +28,13 @@ import java.util.Set;
 
 public class PhoneController {
 
+    private static final Image  DIALOG_BG    = new ImageIcon("assets/UI_Images/background.png").getImage();
+    private static final Image  NOTIF_OK_IMG  = new ImageIcon("assets/UI_Images/notification_ok_btn.png").getImage();
+    private static final Image  ACCEPT_IMG    = new ImageIcon("assets/UI_Images/friendrequest_accept_btn.png").getImage();
+    private static final Image  DECLINE_IMG   = new ImageIcon("assets/UI_Images/friendrequest_decline_btn.png").getImage();
     private static final Color COLOR_NEUTRAL = new Color(166, 173, 200);
-    private static final Color COLOR_ACTIVE  = new Color(166, 227, 161);
-    private static final Color COLOR_RINGING = new Color(243, 139, 168);
+    private static final Color COLOR_ACTIVE  = new Color(26, 74, 138);
+    private static final Color COLOR_RINGING = new Color(224, 53, 53);
 
     private final PhoneFrame        frame;
     private final AlarmPanel        alarmPanel;
@@ -62,9 +68,21 @@ public class PhoneController {
     private void resetWakeCounts() { wakeCountByFriend.clear(); }
 
     private void changeName(String newName) {
-        mediator.unregisterName(myName);
+        String oldName = myName;
+        mediator.unregisterName(oldName);
         myName = newName;
         mediator.registerName(newName, this);
+        mediator.routeNameChange(oldName, newName);
+    }
+
+    public void receiveFriendNameChange(String oldName, String newName) {
+        if (!addedFriends.contains(oldName)) return;
+        addedFriends.remove(oldName);
+        addedFriends.add(newName);
+        int count = wakeCountByFriend.getOrDefault(oldName, 0);
+        wakeCountByFriend.remove(oldName);
+        if (count > 0) wakeCountByFriend.put(newName, count);
+        SwingUtilities.invokeLater(() -> frame.getFriendsPanel().updateFriendName(oldName, newName));
     }
 
     // ── friend request flow (sender side) ────────────────────────────────────
@@ -92,13 +110,20 @@ public class PhoneController {
         dialog.setResizable(false);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
-        JPanel outer = new JPanel(new BorderLayout());
-        outer.setBackground(new Color(49, 50, 68));
-        outer.setBorder(BorderFactory.createLineBorder(new Color(88, 91, 112), 1));
+        JPanel outer = new JPanel(new BorderLayout()) {
+            @Override protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(DIALOG_BG, 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        outer.setBorder(BorderFactory.createLineBorder(new Color(59, 139, 255, 77), 1));
 
         // drag handle header
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(30, 30, 46));
+        header.setOpaque(false);
         header.setBorder(new EmptyBorder(10, 18, 10, 18));
         JLabel headerTitle = new JLabel("Friend Request", SwingConstants.CENTER);
         headerTitle.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -109,7 +134,7 @@ public class PhoneController {
 
         // body
         JPanel body = new JPanel(new GridBagLayout());
-        body.setBackground(new Color(49, 50, 68));
+        body.setOpaque(false);
         body.setBorder(new EmptyBorder(16, 24, 16, 24));
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -119,16 +144,45 @@ public class PhoneController {
         JLabel msg = new JLabel(
             "<html><center><b>" + fromName + "</b> wants to be your friend.</center></html>",
             SwingConstants.CENTER);
-        msg.setForeground(new Color(205, 214, 244));
+        msg.setForeground(new Color(166, 173, 200));
         msg.setFont(new Font("SansSerif", Font.PLAIN, 14));
         body.add(msg, gbc);
 
-        gbc.gridy = 1; gbc.gridwidth = 1; gbc.insets = new Insets(4, 6, 4, 6);
-        JButton acceptBtn  = styledBtn("Accept",  new Color(166, 227, 161), new Color(30, 30, 46));
-        JButton declineBtn = styledBtn("Decline", new Color(243, 139, 168), new Color(30, 30, 46));
-        body.add(acceptBtn,  gbc);
-        gbc.gridx = 1;
-        body.add(declineBtn, gbc);
+        JButton acceptBtn = new JButton() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(ACCEPT_IMG, 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        acceptBtn.setBorderPainted(false);
+        acceptBtn.setContentAreaFilled(false);
+        acceptBtn.setFocusPainted(false);
+        acceptBtn.setPreferredSize(new Dimension(90, 34));
+        acceptBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        JButton declineBtn = new JButton() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(DECLINE_IMG, 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        declineBtn.setBorderPainted(false);
+        declineBtn.setContentAreaFilled(false);
+        declineBtn.setFocusPainted(false);
+        declineBtn.setPreferredSize(new Dimension(90, 34));
+        declineBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        gbc.gridy = 1; gbc.gridwidth = 2; gbc.gridx = 0;
+        gbc.insets = new Insets(4, 0, 4, 0);
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+        btnRow.setOpaque(false);
+        btnRow.add(acceptBtn);
+        btnRow.add(declineBtn);
+        body.add(btnRow, gbc);
 
         outer.add(body, BorderLayout.CENTER);
         dialog.add(outer);
@@ -159,7 +213,7 @@ public class PhoneController {
             ActionListener wakeListener = buildWakeListener(acceptorName);
             if (wakeListener != null)
                 frame.getFriendsPanel().confirmFriend(acceptorName, wakeListener);
-            showNotification("Friend Request Accepted!", new Color(166, 227, 161));
+            showNotification("Friend Request Accepted!", COLOR_ACTIVE);
         });
     }
 
@@ -167,7 +221,7 @@ public class PhoneController {
         SwingUtilities.invokeLater(() -> {
             frame.getFriendsPanel().removeFriendPending(declinerName);
             addedFriends.remove(declinerName);
-            showNotification("Friend Request Denied", new Color(243, 139, 168));
+            showNotification("Friend Request Denied", COLOR_RINGING);
         });
     }
 
@@ -177,10 +231,17 @@ public class PhoneController {
         dlg.setUndecorated(true);
         dlg.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
-        JPanel panel = new JPanel(new BorderLayout(0, 16));
-        panel.setBackground(new Color(49, 50, 68));
+        JPanel panel = new JPanel(new BorderLayout(0, 16)) {
+            @Override protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(DIALOG_BG, 0, 0, getWidth(), getHeight(), this);
+            }
+        };
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(88, 91, 112), 1),
+            BorderFactory.createLineBorder(new Color(59, 139, 255, 77), 1),
             new EmptyBorder(24, 32, 20, 32)));
 
         JLabel msgLabel = new JLabel(
@@ -191,7 +252,18 @@ public class PhoneController {
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         btnRow.setOpaque(false);
-        JButton okBtn = styledBtn("OK", new Color(137, 180, 250), Color.WHITE);
+        JButton okBtn = new JButton() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(KEY_RENDERING,     VALUE_RENDER_QUALITY);
+                g2.drawImage(NOTIF_OK_IMG, 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        okBtn.setBorderPainted(false);
+        okBtn.setContentAreaFilled(false);
+        okBtn.setFocusPainted(false);
+        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         okBtn.setPreferredSize(new Dimension(90, 34));
         okBtn.addActionListener(e -> dlg.dispose());
         btnRow.add(okBtn);
@@ -216,7 +288,7 @@ public class PhoneController {
         alarm = new Alarm(LocalTime.of(h, m, s));
         alarmPanel.getCancelAlarmButton().setEnabled(true);
         alarmPanel.getSetAlarmButton().setEnabled(false);
-        alarmPanel.setAlarmStatus(String.format("Alarm set: %02d:%02d:%02d", h, m, s), COLOR_ACTIVE);
+        alarmPanel.setAlarmStatus(String.format("Alarm set: %02d:%02d:%02d", h, m, s), COLOR_NEUTRAL);
     }
 
     private void cancelAlarm() {
@@ -233,7 +305,12 @@ public class PhoneController {
     private void startClock() {
         clockTimer = new Timer(500, e -> {
             LocalTime now = LocalTime.now();
-            alarmPanel.setCurrentTime(now.format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+            String full = now.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+            String mini = now.format(DateTimeFormatter.ofPattern("HH:mm"));
+            alarmPanel.setCurrentTime(full);
+            frame.getAlarmPanel().setMiniTime(mini);
+            frame.getFriendsPanel().setMiniTime(mini);
+            frame.getSettingsPanel().setMiniTime(mini);
             if (alarm != null && !alarm.isFired() && alarm.matches(now)) {
                 alarm.setFired(true);
                 triggerAlarm();
@@ -243,6 +320,9 @@ public class PhoneController {
     }
 
     private void triggerAlarm() {
+        frame.setExtendedState(JFrame.NORMAL);
+        frame.toFront();
+        frame.requestFocus();
         alarmPanel.getCancelAlarmButton().setEnabled(true);
         alarmPanel.getSetAlarmButton().setEnabled(false);
         alarmPanel.setAlarmStatus("Alarm ringing! Solve the problem to dismiss.", COLOR_RINGING);
@@ -251,7 +331,7 @@ public class PhoneController {
             case MATH      -> new MathQuestion(rng);
             case DICTATION -> new DictationQuestion(rng);
             case BOTH      -> rng.nextBoolean() ? new MathQuestion(rng) : new DictationQuestion(rng);
-        }, this::onAlarmDismissed);
+        }, () -> frame.getSettingsPanel().getAlarmSoundFile(), this::onAlarmDismissed);
         activeDialog.setVisible(true);
     }
 
@@ -281,7 +361,7 @@ public class PhoneController {
         SwingUtilities.invokeLater(() ->
             showNotification(
                 "<html><center>You can no longer<br>wake <b>" + targetName + "</b></center></html>",
-                new Color(243, 139, 168)));
+                COLOR_RINGING));
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
