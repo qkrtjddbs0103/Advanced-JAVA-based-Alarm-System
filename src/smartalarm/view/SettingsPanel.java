@@ -100,7 +100,7 @@ public class SettingsPanel extends JPanel {
 
         // ── Wake Limit item (y=202, h=64) ────────────────────────────────────
         ItemPanel limitItem = new ItemPanel(LIMIT_IMG);
-        limitItem.setBounds(ITEM_X, 274, ITEM_W, 64);
+        limitItem.setBounds(ITEM_X, 270, ITEM_W, 64);
 
         limitDisplay = new JLabel(String.valueOf(pendingWakeLimit), SwingConstants.CENTER);
         limitDisplay.setFont(new Font("Monospaced", Font.BOLD, 20));
@@ -127,7 +127,7 @@ public class SettingsPanel extends JPanel {
 
         // ── Mission Type item (y=270, h=64) ──────────────────────────────────
         ItemPanel missionItem = new ItemPanel(MISSION_IMG);
-        missionItem.setBounds(ITEM_X, 404, ITEM_W, 64);
+        missionItem.setBounds(ITEM_X, 396, ITEM_W, 64);
 
         missionBtn = new JButton() {
             @Override
@@ -153,7 +153,7 @@ public class SettingsPanel extends JPanel {
         // ── Sound item (y=480, h=90) ─────────────────────────────────────────
         loadSoundFiles();
         ItemPanel soundItem = new ItemPanel(SOUND_IMG);
-        soundItem.setBounds(ITEM_X, 480, ITEM_W, 90);
+        soundItem.setBounds(ITEM_X, 522, ITEM_W, 90);
 
         soundNameLabel = new JLabel(currentSoundName(), SwingConstants.LEFT);
         soundNameLabel.setFont(new Font("SansSerif", Font.BOLD, 15));

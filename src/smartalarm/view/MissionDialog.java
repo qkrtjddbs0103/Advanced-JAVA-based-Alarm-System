@@ -1,6 +1,5 @@
 package smartalarm.view;
 
-import smartalarm.model.question.AnswerResult;
 import smartalarm.model.question.Question;
 
 import javax.sound.sampled.*;

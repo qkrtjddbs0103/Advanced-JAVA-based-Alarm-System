@@ -372,17 +372,6 @@ public class PhoneController {
         return e -> mediator.relay(targetId, myName);
     }
 
-    private static JButton styledBtn(String text, Color bg, Color fg) {
-        JButton btn = new JButton(text);
-        btn.setBackground(bg);
-        btn.setForeground(fg);
-        btn.setFont(new Font("SansSerif", Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return btn;
-    }
-
     private static void addDrag(Component handle, Window window) {
         int[] ox = {0}, oy = {0};
         handle.addMouseListener(new MouseAdapter() {
